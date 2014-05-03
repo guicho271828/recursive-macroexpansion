@@ -75,12 +75,11 @@ special here is =rmacroexpand=.
     )
 #+END_SRC
 
-*Note* that the example below IGNORES the surrounding environment
-in the expansion of the subforms,
-because it does not give the &environment variable explicitly.
+** Consider the surrounding environment
 
-It means that, the subform expansion does not consider the declared information in
-the surrounding environment.
+*Note* that the example above IGNORES the surrounding environment
+in the expansion of the subforms,
+so the subform expansion does not consider the declared information.
 
 #+BEGIN_SRC lisp
 (defmacro env-checker (&environment env)
