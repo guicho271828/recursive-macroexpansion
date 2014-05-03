@@ -10,11 +10,6 @@
   (assert (functionp new-fn))
   (setf (get symbol 'recursive-macro-function) new-fn))
 
-;; (defun ensure-continuation (lambda-list)
-;;   (if (member '&continuation expand-lambda-list)
-;;       expand-lambda-list
-;;       (append expand-lambda-list '(&continuation continuation))))
-
 (defmacro defexpand (name lambda-list &body body)
   (multiple-value-bind (env args) (take-env lambda-list)
     `(setf (recursive-macro-function ',name)
@@ -25,12 +20,26 @@
               (declare (ignorable ,env))
               ,@body))))
 
-;; (defun recursive-hook (macrofn form env)
-;;   (declare (ignore macrofn))
-;;   (rmacroexpand-1 form env))
+(defun recursive-hook (macrofn form env)
+  (declare (ignore macrofn))
+  (rmacroexpand form env))
 
-;; (defun enable-recursive-macroexpansion ()
-;;   (setf *macroexpand-hook* 'recursive-hook))
+(let (old-hook)
+  (defun enable-recursive-macroexpansion ()
+    (when (null old-hook)
+      (setf old-hook *macroexpand-hook*))
+    (setf *macroexpand-hook* #'recursive-hook))
+  (defun disable-recursive-macroexpansion ()
+    (setf old-hook nil
+          *macroexpand-hook* 'funcall)))
+
+(defmacro with-recursive-macro-expansion (() &body body)
+  `(prog2
+       (eval-when (:compile-toplevel :load-toplevel :execute)
+         (enable-recursive-macroexpansion))
+       (progn ,@body)
+     (eval-when (:compile-toplevel :load-toplevel :execute)
+       (disable-recursive-macroexpansion))))
 
 (defun rmacroexpand (form &optional env)
   ;; partly picked from macroexpand-1 in sbcl
@@ -47,6 +56,8 @@
                  (when (macro-function head env)
                    (warn "defmacro found; expanding recursively...")
                    ;; macroexpand-1 is necessary in order to override the normal macros
+                   ;; Be sure that macroexpand-1 calls *macroexpand-hook*.
+                   ;; If things are treated incorrectly, it will cause an infinite loop
                    (return (rmacroexpand (macroexpand-1 form env) env))))
                ;; special form or function form
                (return (rmacroexpand-core form env)))

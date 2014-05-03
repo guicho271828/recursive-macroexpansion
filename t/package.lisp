@@ -29,7 +29,7 @@
   (format *standard-output* "~&ignored a stupid error")
   (continue c))
 
-(defmacro with-let (var-form value-form &body body)
+(defmacro with-let-normal (var-form value-form &body body)
   (handler-bind ((error #'stupid-error-handler))
     `(let ((,var-form ,value-form))
        ,@body)))
@@ -43,15 +43,15 @@
 (test macroexpansion
   (is (tree-equal
        '(let ((x 1)) (print x))
-       (macroexpand '(with-let x 1 (print x)))))
+       (macroexpand '(with-let-normal x 1 (print x)))))
 
   ;; expansion works normally if nothing is signalled
   (finishes
-    (with-let x 1 (limited-progn 1 2)))
+    (with-let-normal x 1 (limited-progn 1 2)))
 
   ;; the error is not trapped, so it is visible from the outside
   (signals error
-    (with-let x 1 (limited-progn 1 2 3 4))))
+    (with-let-normal x 1 (limited-progn 1 2 3 4))))
 
 
 ;; On the other hand, in `defexpand', we can control the further expansion.

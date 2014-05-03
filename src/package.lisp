@@ -9,4 +9,5 @@ Copyright (c) 2014 guicho
         :optima)
   (:export :defexpand
            :rmacroexpand
-           :recursive-macro-function))
+           :recursive-macro-function
+           :with-recursive-macro-expansion))
