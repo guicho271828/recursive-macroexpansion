@@ -22,4 +22,6 @@
 ;; (take-env '(a b &environment env d))
 
 (defun take-declarations (body)
-  (remove-if-not ^(eq 'declare (car %)) body))
+  (mappend #'cdr
+           (keep-if ^(eq 'declare (car %))
+                    body)))
