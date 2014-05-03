@@ -10,6 +10,31 @@ Common Lisp's macro expansion, which is based on =macroexpand-1= and =macroexpan
 *BIG NOTE*: This is my *FIRST* library written in controversial =CL21=. Thanks to
 [[https://github.com/fukamachi][Fukamachi]] !
 
+*BIG NOTE2*: This should be clearly noted for the people not familier with
+CL21. This library is written in CL21 but /using this library does not require
+doing so/. If you use RMACROEXPAND, it is just a normal common lisp
+function. Symbols are exported just as in Common Lisp.
+
+While dependency to CL21 exists, once installed, CL21 does not interfere
+you, nor does it break your environment (such as overwriting the readtable).
+CL21 introduces many custom readmacros, but one
+notable point in CL21 is its *package local readtable* (implemented with
+=named-readtable=). AFAIK it is safer than the previous readtable manipulation
+method. In CL21, a new =in-package= is introduced so that it automatically loads the
+=named-readtable= with the same name as that of the package.
+
+
+* API
+
+Four functions/macros are exported.
+
+|                                 | analogous to                                            |
+|---------------------------------+---------------------------------------------------------|
+| defexpand                       | defmacro                                                |
+| rmacroexpand                    | macroexpand , macroexpand-dammit , macroexpand-all etc. |
+| recursive-macro-function        | macro-function                                          |
+| (setf recursive-macro-function) | (setf macro-function)                                   |
+
 * Examples
 
 Ordinary macro expands one layer only.  Further expansions are implicitly done by
@@ -75,7 +100,7 @@ special here is =rmacroexpand=.
     )
 #+END_SRC
 
-** Consider the surrounding environment
+** Considering the surrounding environment
 
 *Note* that the example above IGNORES the surrounding environment
 in the expansion of the subforms,
