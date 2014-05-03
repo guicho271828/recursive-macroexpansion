@@ -25,9 +25,10 @@
 ;; in the expansion of the subforms.
 
 ;; For example, the combination below is a rather stupid example:
-(defun stupid-error-handler (c)
-  (format *standard-output* "~&ignored a stupid error")
-  (continue c))
+(eval-when (:compile-toplevel :load-toplevel :execute)
+  (defun stupid-error-handler (c)
+    (format *standard-output* "~&ignored a stupid error")
+    (continue c)))
 
 (defmacro with-let-normal (var-form value-form &body body)
   (handler-bind ((error #'stupid-error-handler))
@@ -47,11 +48,11 @@
 
   ;; expansion works normally if nothing is signalled
   (finishes
-    (with-let-normal x 1 (limited-progn 1 2)))
+    (eval '(with-let-normal x 1 (limited-progn x 2))))
 
   ;; the error is not trapped, so it is visible from the outside
   (signals error
-    (with-let-normal x 1 (limited-progn 1 2 3 4))))
+    (eval '(with-let-normal x 1 (limited-progn x 2 3 4)))))
 
 
 ;; On the other hand, in `defexpand', we can control the further expansion.
@@ -71,12 +72,12 @@
   ;; expansion works normally
   (finishes
     (rmacroexpand
-     '(with-let x 1 (limited-progn 1 2))))
+     '(with-let x 1 (limited-progn x 2))))
 
   ;; the error is handled in compile time and ignored.
   (finishes
     (rmacroexpand
-     '(with-let x 1 (limited-progn 1 2 3 4)))))
+     '(with-let x 1 (limited-progn x 2 3 4)))))
 
 
 ;; *Note* that the example below IGNORES the surrounding environment
@@ -120,3 +121,17 @@
           (declare (type integer x))
           (with-let-env y x
             (env-checker)))))))
+
+
+(defun adder (x)
+  (declare (type integer x))
+  (with-let-env y (1+ x)
+    (list x y (env-checker))))
+
+(test macroexpand-rmacroexpand-delegation
+  (finishes
+    (with-let x 1 (print x)))
+  (is (tree-equal '(2 3 (:LEXICAL T ((TYPE . INTEGER))))
+                  (adder 2))))
+
+

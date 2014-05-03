@@ -11,35 +11,20 @@
   (setf (get symbol 'recursive-macro-function) new-fn))
 
 (defmacro defexpand (name lambda-list &body body)
-  (multiple-value-bind (env args) (take-env lambda-list)
-    `(setf (recursive-macro-function ',name)
-           (,@(list #-sbcl 'lambda
-                    #+sbcl 'sb-int:named-lambda
-                    #+sbcl name)
-              (,env ,@(subst '&rest '&body args))
-              (declare (ignorable ,env))
-              ,@body))))
-
-(defun recursive-hook (macrofn form env)
-  (declare (ignore macrofn))
-  (rmacroexpand form env))
-
-(let (old-hook)
-  (defun enable-recursive-macroexpansion ()
-    (when (null old-hook)
-      (setf old-hook *macroexpand-hook*))
-    (setf *macroexpand-hook* #'recursive-hook))
-  (defun disable-recursive-macroexpansion ()
-    (setf old-hook nil
-          *macroexpand-hook* 'funcall)))
-
-(defmacro with-recursive-macro-expansion (() &body body)
-  `(prog2
-       (eval-when (:compile-toplevel :load-toplevel :execute)
-         (enable-recursive-macroexpansion))
-       (progn ,@body)
-     (eval-when (:compile-toplevel :load-toplevel :execute)
-       (disable-recursive-macroexpansion))))
+  (multiple-value-bind (whole sans-whole) (take-whole lambda-list)
+    (multiple-value-bind (env sans-env-whole) (take-env sans-whole)
+      `(eval-when (:compile-toplevel :load-toplevel :execute)
+         (defmacro ,name (&whole ,whole
+                          &environment ,env
+                            ,@sans-env-whole)
+           (rmacroexpand ,whole ,env))
+         (setf (recursive-macro-function ',name)
+               (,@(list #-sbcl 'lambda
+                        #+sbcl 'sb-int:named-lambda
+                        #+sbcl (intern (format nil "~S-EXPANDER" name)))
+                  (,env ,whole ,@(subst '&rest '&body sans-env-whole))
+                  (declare (ignorable ,env ,whole))
+                  ,@body))))))
 
 (defun rmacroexpand (form &optional env)
   ;; partly picked from macroexpand-1 in sbcl
@@ -50,11 +35,11 @@
                (let ((head (car form)))
                  ;; recursive macro
                  (when-let1 (rmacrofn (recursive-macro-function head))
-                   (warn "recursive expander found")
-                   (return (apply rmacrofn env (cdr form))))
+                   ;;(warn "recursive expander found")
+                   (return (apply rmacrofn env form (cdr form))))
                  ;; standard macro
                  (when (macro-function head env)
-                   (warn "defmacro found; expanding recursively...")
+                   ;;(warn "defmacro found; expanding recursively...")
                    ;; macroexpand-1 is necessary in order to override the normal macros
                    ;; Be sure that macroexpand-1 calls *macroexpand-hook*.
                    ;; If things are treated incorrectly, it will cause an infinite loop
@@ -75,12 +60,13 @@
 (defun rmacroexpand-lambda (form env)
   (map ^(rmacroexpand % env) form))
 
+(defvar *special-forms-handlers* nil)
+
 (defun rmacroexpand-core (form env)
   (if-let1 (h (getf *special-forms-handlers* (car form)))
     (apply h env (cdr form))
     `(,(car form) ,@(map ^(rmacroexpand % env) (cdr form)))))
 
-(defvar *special-forms-handlers* nil)
 (defmacro define-special-forms-handler (name args &body body)
   (multiple-value-bind (env args) (take-env args)
     `(progn

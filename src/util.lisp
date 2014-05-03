@@ -4,9 +4,13 @@
 
 ;; *macroexpand-hook* = 'funcall by default
 
+(defun take-whole (lambda-list)
+  (if (eq (first lambda-list) '&whole)
+      (values (second lambda-list) (cddr lambda-list))
+      (values (gensym "WHOLE") lambda-list)))
 
-(defun take-env (args)
-    (%take nil args))
+(defun take-env (lambda-list)
+  (%take nil lambda-list))
 
 (defun %take (acc rest)
   (match rest
@@ -23,5 +27,5 @@
 
 (defun take-declarations (body)
   (mappend #'cdr
-           (keep-if ^(eq 'declare (car %))
+           (keep-if #'(and consp ^(eq 'declare (car %)))
                     body)))
