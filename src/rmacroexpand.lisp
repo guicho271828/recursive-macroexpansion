@@ -2,13 +2,7 @@
 (in-package :cl21-user)
 (in-package :recursive-macroexpansion)
 
-(defun recursive-macro-function (symbol)
-  (assert (symbolp symbol))
-  (get symbol 'recursive-macro-function))
-
-(defun (setf recursive-macro-function) (new-fn symbol)
-  (assert (functionp new-fn))
-  (setf (get symbol 'recursive-macro-function) new-fn))
+(define-symbol-plist-accessor recursive-macro-function)
 
 (defmacro defexpand (name lambda-list &body body)
   (multiple-value-bind (whole sans-whole) (take-whole lambda-list)
@@ -23,12 +17,11 @@
                     ;; abort redefinition
                     (declare (ignore c))))
          (setf (recursive-macro-function ',name)
-               (,@(list #-sbcl 'lambda
-                        #+sbcl 'sb-int:named-lambda
-                        #+sbcl (intern (format nil "~S-EXPANDER" name)))
-                  (,env ,whole ,@(subst '&rest '&body sans-env-whole))
-                  (declare (ignorable ,env ,whole))
-                  ,@body))))))
+               (maybe-named-lambda
+                   ',(intern (format nil "~S-EXPANDER" name))
+                   (,env ,whole ,@(subst '&rest '&body sans-env-whole))
+                 (declare (ignorable ,env ,whole))
+                 ,@body))))))
 
 (defun rmacroexpand (form &optional env)
   ;; partly picked from macroexpand-1 in sbcl
@@ -64,23 +57,20 @@
 (defun rmacroexpand-lambda (form env)
   (map ^(rmacroexpand % env) form))
 
-(defvar *special-forms-handlers* nil)
+
+(define-symbol-plist-accessor special-form-handler)
 
 (defun rmacroexpand-core (form env)
-  (if-let1 (h (getf *special-forms-handlers* (car form)))
+  (if-let1 (h (special-form-handler (car form)))
     (apply h env (cdr form))
     `(,(car form) ,@(map ^(rmacroexpand % env) (cdr form)))))
 
 (defmacro define-special-forms-handler (name args &body body)
   (multiple-value-bind (env args) (take-env args)
     `(progn
-       (setf (getf *special-forms-handlers* ',name)
-             #-sbcl
-             (lambda (,env ,@args)
-               ,@body)
-             #+sbcl
-             (sb-int:named-lambda ',(gensym (symbol-name name)) (,env ,@args)
-                 ,@body))
+       (setf (special-form-handler ',name)
+             (maybe-named-lambda ',(gensym (symbol-name name)) (,env ,@args)
+               ,@body))
        ',name)))
 
 

@@ -17,7 +17,9 @@
                 :components
                 ((:file "package")
                  (:file "util")
-                 (:file "rmacroexpand"))
+                 (:file "rmacroexpand")
+                 (:file "handlers")
+                 (:file "hooks"))
                 :serial t))
   :description ""
   

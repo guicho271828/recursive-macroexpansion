@@ -32,3 +32,21 @@
   (mappend #'cdr
            (keep-if #'(and consp ^(eq 'declare (car %)))
                     body)))
+
+(defmacro define-symbol-plist-accessor (name)
+  `(progn
+     (defun ,name (symbol)
+       (assert (symbolp symbol))
+       (get symbol ',name))
+     (define-setf-expander ,name (symbol)
+       (with-gensyms (newval)
+         (values nil nil `(,newval)
+                 `(setf (get ,symbol ',',name) ,newval)
+                 `(,',name ,symbol))))))
+
+
+(defmacro maybe-named-lambda (name args &body body)
+  #-sbcl
+  `(lambda ,args ,@body)
+  #+sbcl
+  `(sb-int:named-lambda ,name ,args ,@body))
