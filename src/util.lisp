@@ -13,13 +13,16 @@
   (%take nil lambda-list))
 
 (defun %take (acc rest)
-  (match rest
+  (ematch rest
     ((list* '&environment env rest)
      (assert (symbolp env) nil "&environment variable should be a symbol")
      (values env (append (reverse acc) rest)))
     ((list* thing nil)
      (signal "No &environment variable found")
      (values (gensym "ENV") (reverse (cons thing acc))))
+    (nil
+     (signal "No &environment variable found")
+     (values (gensym "ENV") nil))
     ((list* thing rest)
      (%take (cons thing acc) rest))))
 
