@@ -14,10 +14,14 @@
   (multiple-value-bind (whole sans-whole) (take-whole lambda-list)
     (multiple-value-bind (env sans-env-whole) (take-env sans-whole)
       `(eval-when (:compile-toplevel :load-toplevel :execute)
-         (defmacro ,name (&whole ,whole
-                          &environment ,env
-                            ,@sans-env-whole)
-           (rmacroexpand ,whole ,env))
+         (handler-case 
+             (defmacro ,name (&whole ,whole
+                              &environment ,env
+                                ,@sans-env-whole)
+               (rmacroexpand ,whole ,env))
+           #+sbcl (SB-EXT:SYMBOL-PACKAGE-LOCKED-ERROR (c)
+                    ;; abort redefinition
+                    (declare (ignore c))))
          (setf (recursive-macro-function ',name)
                (,@(list #-sbcl 'lambda
                         #+sbcl 'sb-int:named-lambda
