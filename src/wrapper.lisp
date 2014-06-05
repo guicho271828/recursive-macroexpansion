@@ -39,29 +39,32 @@
    (slots :initarg :slots :accessor slots))
     "a condition signalled when compiling defclass")
 (define-definition-conditions condition (compile-class) ()
-    "a condition signalled when compiling defclass")
+    "a condition signalled when compiling define-condition")
 
-(macrolet ((expand-fun (target)
+(macrolet ((expand (target)
              `(defexpand ,target (&whole whole name args &body body &environment env)
                 (signals (if (fboundp name) 'function-redefinition 'function-definition)
                          :name name :args args :body body)
                 (macroexpand whole env))))
-  (expand-fun defun)
-  (expand-fun defgeneric)
-  (expand-fun defmacro)
-  (expand-fun define-compiler-macro)
-  (expand-fun defmethod))
+  (expand defun)
+  (expand defgeneric)
+  (expand defmacro)
+  (expand define-compiler-macro)
+  (expand defmethod)
+  (expand deftype))
 
-(macrolet ((expand-var (target)
+(macrolet ((expand (target)
              `(defexpand ,target (&whole whole name &body body &environment env)
                 (signals (if (boundp name) 'variable-redefinition 'variable-definition)
                          :name name
                          :body body)
                 (macroexpand whole env))))
-  (expand-fun defvar)
-  (expand-fun defparameter))
+  (expand defvar)
+  (expand defparameter)
+  (expand defconstant)
+  (expand define-symbol-macro))
 
-(macrolet ((expand-class (target def redef)
+(macrolet ((expand (target def redef)
              `(defexpand ,target (&whole whole name superclasses slots &rest options &environment env)
                 (signals (if (find-class name nil env) ',def ',redef)
                          :name name
@@ -69,6 +72,9 @@
                          :slots slots
                          :options options)
                 (macroexpand whole env))))
-  (expand-fun defclass class-definition class-redefinition)
-  (expand-fun define-condition condition-definition condition-redefinition))
+  (expand defclass class-definition class-redefinition)
+  (expand define-condition condition-definition condition-redefinition))
+
+;; define-method-combination define-modify-macro
+;; define-setf-expander
 
