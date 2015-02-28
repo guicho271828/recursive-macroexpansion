@@ -27,24 +27,26 @@
   ;; partly picked from macroexpand-1 in sbcl
   (cond ((consp form)
          ;; the form is either a special, macro, function, lambda form
-         (if (symbolp (car form))
+         (destructuring-bind (head &rest args) form
+           (if (symbolp head)
              (block nil
-               (let ((head (car form)))
+                 ;; special form
+                 (when-let1 (h (special-form-handler head))
+                   (return (apply h env args)))
                  ;; recursive macro
                  (when-let1 (rmacrofn (recursive-macro-function head))
                    ;;(warn "recursive expander found")
-                   (return (apply rmacrofn env form (cdr form))))
+                   (return (apply rmacrofn env form args)))
                  ;; standard macro
                  (when (macro-function head env)
                    ;;(warn "defmacro found; expanding recursively...")
                    ;; macroexpand-1 is necessary in order to override the normal macros
                    ;; Be sure that macroexpand-1 calls *macroexpand-hook*.
                    ;; If things are treated incorrectly, it will cause an infinite loop
-                   (return (rmacroexpand (macroexpand-1 form env) env))))
-               ;; special form or function form
-               (return (rmacroexpand-core form env)))
+                   (return (rmacroexpand (macroexpand-1 form env) env)))
+                 `(,head ,@(map ^(rmacroexpand % env) args)))
              ;; cons, but the car is not a symbol = lambda form
-               (rmacroexpand `(funcall ,head ,@args) env)))
+               (rmacroexpand `(funcall ,head ,@args) env))))
         ;; form is atoms
         ((symbolp form) ;; symbol-macrolet, or variable
          (multiple-value-bind (expansion expanded-p) (macroexpand-1 form env)
@@ -55,11 +57,6 @@
          form)))
 
 (define-symbol-plist-accessor special-form-handler)
-
-(defun rmacroexpand-core (form env)
-  (if-let1 (h (special-form-handler (car form)))
-    (apply h env (cdr form))
-    `(,(car form) ,@(map ^(rmacroexpand % env) (cdr form)))))
 
 (defmacro define-special-forms-handler (name args &body body)
   (multiple-value-bind (env args) (take-env args)
