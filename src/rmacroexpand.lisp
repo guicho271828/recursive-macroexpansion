@@ -63,6 +63,7 @@
     `(progn
        (setf (special-form-handler ',name)
              (maybe-named-lambda ',(gensym (symbol-name name)) (,env ,@args)
+               (declare (ignorable ,env ,@(set-difference args +lambda-list-keywords+)))
                ,@body))
        ',name)))
 
