@@ -69,6 +69,26 @@
                  (rmacroexpand % (%aug env :declare (take-declarations body))))
             body)))
 
+;; when lambda form remains in the first argument of function, then it
+;; descends into the lambda and expand it again, which results in another
+;; (function (lambda ...)) and infinite recursion.
+;; One way to prevent it is to convert them into 
+(define-special-forms-handler lambda (&environment env &rest rest)
+  (destructuring-bind (args &rest body) rest
+    (let ((newenv (%aug env
+                        :variable (set-difference args +lambda-list-keywords+)
+                        :declare (take-declarations body))))
+      `(lambda ,args ,@(map ^(rmacroexpand % newenv) body)))))
+
+#+sbcl
+(define-special-forms-handler sb-int:named-lambda (&environment env &rest rest)
+  (destructuring-bind (name args &rest body) rest
+    (declare (ignorable name))
+    (let ((newenv (%aug env
+                        :variable (set-difference args +lambda-list-keywords+)
+                        :declare (take-declarations body))))
+      `(lambda ,args ,@(map ^(rmacroexpand % newenv) body)))))
+
 ;; (X arg &rest rest) -- 1st argument not evaluated
 (macrolet ((h (special)
              `(define-special-forms-handler ,special (&environment env arg &rest rest)
