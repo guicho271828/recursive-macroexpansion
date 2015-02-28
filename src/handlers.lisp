@@ -46,8 +46,9 @@
 (define-special-forms-handler macrolet (&environment env bindings &rest body)
   (let ((newenv (%aug env
                       :macro (map ^(destructuring-bind (name args &rest body) %
-                                     (list name (compile nil
-                                                         (parse-macro name args body env))))
+                                     (list name (enclose
+                                                 (parse-macro name args body env)
+                                                 env)))
                                   bindings))))
     `(progn ,@(map ^(rmacroexpand % newenv)
                    body))))

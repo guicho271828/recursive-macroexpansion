@@ -140,8 +140,38 @@
 (test macrolet
   (is (tree-equal
        `(PROGN (+ 2 2))
-       (recursive-macroexpansion:rmacroexpand
+       (rmacroexpand
         '(macrolet ((stuff ()
                      `(+ 2 2)))
           (stuff))))))
 
+  ;; copied and modified from guicho271828/macroexpand-dammit
+
+(test nested
+  "testing highly nested macrolets"
+  (macrolet ((a () :b))
+
+    (macrolet ((c (&body body &environment env)
+		 (let ((expansion (rmacroexpand body env)))
+		   (is (equalp expansion
+			       '((PRINT :b) (PRINT :b))))
+		   `(progn ,@expansion))))
+
+      (macrolet ((d () `(a)))
+	(c (print (d))
+	   (print (d)))))))
+
+(test nested2
+  "testing highly nested macrolets 2nd. error case in 20100701"
+  (macrolet ((a () :b))
+    (macrolet
+	((c (&body body &environment env)
+	   (let ((expansion (rmacroexpand body env))) ; <-------+
+	     (is (equalp expansion			    ;   |
+			 '((progn (PRINT :b) (PRINT :b))))) ;   |
+	     `(progn ,@expansion))))			    ;   |
+      (macrolet ((d () `(a)))	     ;			        |
+	(c			     ;			        |
+	 (macrolet ((e () `(a)))     ; <------------------------+
+	   (print (d))		     ; the older version of macroexpand-dammit
+	   (print (e))))))))	     ; stops expanding the form after this point.
