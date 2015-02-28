@@ -175,3 +175,9 @@
 	 (macrolet ((e () `(a)))     ; <------------------------+
 	   (print (d))		     ; the older version of macroexpand-dammit
 	   (print (e))))))))	     ; stops expanding the form after this point.
+
+(test lambda
+  "lambda form in ANSI CL"
+  (finishes
+    (rmacroexpand '((lambda (x) x) 5))))
+

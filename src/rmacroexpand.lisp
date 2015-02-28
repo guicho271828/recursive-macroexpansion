@@ -44,7 +44,7 @@
                ;; special form or function form
                (return (rmacroexpand-core form env)))
              ;; cons, but the car is not a symbol = lambda form
-             (rmacroexpand-lambda form env)))
+               (rmacroexpand `(funcall ,head ,@args) env)))
         ;; form is atoms
         ((symbolp form) ;; symbol-macrolet, or variable
          (multiple-value-bind (expansion expanded-p) (macroexpand-1 form env)
@@ -53,10 +53,6 @@
                expansion)))
         ((constantp form) ;; self-evaluating object
          form)))
-
-(defun rmacroexpand-lambda (form env)
-  (map ^(rmacroexpand % env) form))
-
 
 (define-symbol-plist-accessor special-form-handler)
 
