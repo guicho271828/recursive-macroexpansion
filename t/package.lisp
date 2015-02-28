@@ -135,3 +135,13 @@
                   (adder 2))))
 
 
+;;;; macrolet (regression #1)
+
+(test macrolet
+  (is (tree-equal
+       `(PROGN (+ 2 2))
+       (recursive-macroexpansion:rmacroexpand
+        '(macrolet ((stuff ()
+                     `(+ 2 2)))
+          (stuff))))))
+
