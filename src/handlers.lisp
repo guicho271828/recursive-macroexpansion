@@ -1,5 +1,4 @@
 
-(in-package :cl21-user)
 (in-package :recursive-macroexpansion)
 
 ;; let,let*,flet,macrolet,symbol-macrolet
@@ -17,56 +16,56 @@
 
 (define-special-forms-handler let (&environment env bindings &rest body)
   (let ((newenv (%aug env
-                      :variable (map #'car bindings)
+                      :variable (mapcar #'car bindings)
                       :declare (take-declarations body))))
-    `(let ,(map ^(expand-var env %) bindings)
-       ,@(map ^(rmacroexpand % newenv) body))))
+    `(let ,(mapcar (lambda (%) (expand-var env %)) bindings)
+       ,@(mapcar (lambda (%) (rmacroexpand % newenv)) body))))
 
 (define-special-forms-handler let* (&environment env bindings &rest body)
   (let ((newenv (%aug env
-                      :variable (map #'car bindings)
+                      :variable (mapcar #'car bindings)
                       :declare (take-declarations body))))
-    `(let* ,(map ^(expand-var newenv %) bindings)
-       ,@(map ^(rmacroexpand % newenv) body))))
+    `(let* ,(mapcar (lambda (%) (expand-var newenv %)) bindings)
+       ,@(mapcar (lambda (%) (rmacroexpand % newenv)) body))))
 
 (define-special-forms-handler flet (&environment env bindings &rest body)
   (let ((newenv (%aug env
-                      :function (map #'car bindings)
+                      :function (mapcar #'car bindings)
                       :declare (take-declarations body))))
-    `(flet ,(map ^(expand-fn env %) bindings)
-       ,@(map ^(rmacroexpand % newenv) body))))
+    `(flet ,(mapcar (lambda (%) (expand-fn env %)) bindings)
+       ,@(mapcar (lambda (%) (rmacroexpand % newenv)) body))))
 
 (define-special-forms-handler labels (&environment env bindings &rest body)
   (let ((newenv (%aug env
-                      :function (map #'car bindings)
+                      :function (mapcar #'car bindings)
                       :declare (take-declarations body))))
-    `(labels ,(map ^(expand-fn newenv %) bindings)
-       ,@(map ^(rmacroexpand % newenv) body))))
+    `(labels ,(mapcar (lambda (%) (expand-fn newenv %)) bindings)
+       ,@(mapcar (lambda (%) (rmacroexpand % newenv)) body))))
 
 (define-special-forms-handler macrolet (&environment env bindings &rest body)
   (let ((newenv (%aug env
-                      :macro (map ^(destructuring-bind (name args &rest body) %
+                      :macro (mapcar (lambda (%) (destructuring-bind (name args &rest body) %
                                      (list name (enclose
                                                  (parse-macro name args body env)
-                                                 env)))
+                                                 env))))
                                   bindings))))
-    `(progn ,@(map ^(rmacroexpand % newenv)
+    `(progn ,@(mapcar (lambda (%) (rmacroexpand % newenv))
                    body))))
 
 (define-special-forms-handler symbol-macrolet (&environment env bindings &rest body)
   (let ((newenv (%aug env :symbol-macro bindings)))
-    `(progn ,@(map ^(rmacroexpand % newenv) body))))
+    `(progn ,@(mapcar (lambda (%) (rmacroexpand % newenv)) body))))
 
 (define-special-forms-handler locally (&environment env &rest body)
   `(progn
-     ,@(map ^(rmacroexpand % (%aug env :declare (take-declarations body)))
+     ,@(mapcar (lambda (%) (rmacroexpand % (%aug env :declare (take-declarations body))))
             body)))
 
 ;; special
 (define-special-forms-handler tagbody (&environment env &rest body)
   `(progn
-     ,@(map ^(if (not (consp %)) %
-                 (rmacroexpand % (%aug env :declare (take-declarations body))))
+     ,@(mapcar (lambda (%) (if (not (consp %)) %
+                 (rmacroexpand % (%aug env :declare (take-declarations body)))))
             body)))
 
 ;; when lambda form remains in the first argument of function, then it
@@ -76,23 +75,23 @@
 (define-special-forms-handler lambda (&environment env &rest rest)
   (destructuring-bind (args &rest body) rest
     (let ((newenv (%aug env
-                        :variable (set-difference args +lambda-list-keywords+)
+                        :variable (set-difference args lambda-list-keywords)
                         :declare (take-declarations body))))
-      `(lambda ,args ,@(map ^(rmacroexpand % newenv) body)))))
+      `(lambda ,args ,@(mapcar (lambda (%) (rmacroexpand % newenv)) body)))))
 
 #+sbcl
 (define-special-forms-handler sb-int:named-lambda (&environment env &rest rest)
   (destructuring-bind (name args &rest body) rest
     (declare (ignorable name))
     (let ((newenv (%aug env
-                        :variable (set-difference args +lambda-list-keywords+)
+                        :variable (set-difference args lambda-list-keywords)
                         :declare (take-declarations body))))
-      `(lambda ,args ,@(map ^(rmacroexpand % newenv) body)))))
+      `(lambda ,args ,@(mapcar (lambda (%) (rmacroexpand % newenv)) body)))))
 
 ;; (X arg &rest rest) -- 1st argument not evaluated
 (macrolet ((h (special)
              `(define-special-forms-handler ,special (&environment env arg &rest rest)
-                `(,',special ,arg ,@(map ^(rmacroexpand % env) rest)))))
+                `(,',special ,arg ,@(mapcar (lambda (%) (rmacroexpand % env)) rest)))))
   (h block)
   (h go)
   (h eval-when)
@@ -104,7 +103,7 @@
 ;; (X &rest rest) -- rest evaluated
 (macrolet ((h (special)
              `(define-special-forms-handler ,special (&environment env &rest rest)
-                `(,',special ,@(map ^(rmacroexpand % env) rest)))))
+                `(,',special ,@(mapcar (lambda (%) (rmacroexpand % env)) rest)))))
   (h catch)
   (h if)
   (h multiple-value-call)

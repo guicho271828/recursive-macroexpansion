@@ -3,9 +3,9 @@
   Copyright (c) 2014 guicho
 |#
 
-(in-package :cl21-user)
+(in-package :cl-user)
 (defpackage :recursive-macroexpansion.test
-  (:use :cl21
+  (:use :cl
         :recursive-macroexpansion
         :fiveam))
 (in-package :recursive-macroexpansion.test)

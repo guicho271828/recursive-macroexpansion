@@ -12,7 +12,8 @@
   :author "guicho"
   :mailto ""
   :license ""
-  :depends-on (:cl21 :optima)
+  :depends-on (:optima :introspect-environment
+                       :lisp-namespace)
   :components ((:module "src"
                 :components
                 ((:file "package")

@@ -1,8 +1,15 @@
 
-(in-package :cl21-user)
 (in-package :recursive-macroexpansion)
 
-(define-symbol-plist-accessor recursive-macro-function)
+(lispn:define-namespace recursive-macro-function function)
+(lispn:define-namespace special-form-handler function)
+
+(defun recursive-macro-function (sym)
+  (ignore-errors
+    (symbol-recursive-macro-function sym)))
+
+(defun (setf recursive-macro-function) (newval sym)
+  (setf (symbol-recursive-macro-function sym) newval))
 
 (defmacro defrmacro (name lambda-list &body body)
   (multiple-value-bind (whole sans-whole) (take-whole lambda-list)
@@ -31,10 +38,11 @@
            (if (symbolp head)
                (block nil
                  ;; special form
-                 (when-let1 (h (special-form-handler head))
+                 (when-let ((h (ignore-errors
+                                 (symbol-special-form-handler head))))
                    (return (apply h env args)))
                  ;; recursive macro
-                 (when-let1 (rmacrofn (recursive-macro-function head))
+                 (when-let ((rmacrofn (recursive-macro-function head)))
                    ;;(warn "recursive expander found")
                    (return (apply rmacrofn env form args)))
                  ;; standard macro
@@ -44,7 +52,7 @@
                    ;; Be sure that macroexpand-1 calls *macroexpand-hook*.
                    ;; If things are treated incorrectly, it will cause an infinite loop
                    (return (rmacroexpand (macroexpand-1 form env) env)))
-                 `(,head ,@(map ^(rmacroexpand % env) args)))
+                 `(,head ,@(mapcar (lambda (%)(rmacroexpand % env)) args)))
                ;; cons, but the car is not a symbol = lambda form
                (rmacroexpand `(funcall ,head ,@args) env))))
         ;; form is atoms
@@ -56,14 +64,12 @@
         ((constantp form) ;; self-evaluating object
          form)))
 
-(define-symbol-plist-accessor special-form-handler)
-
 (defmacro define-special-forms-handler (name args &body body)
   (multiple-value-bind (env args) (take-env args)
     `(progn
-       (setf (special-form-handler ',name)
+       (setf (symbol-special-form-handler ',name)
              (maybe-named-lambda ',(gensym (symbol-name name)) (,env ,@args)
-               (declare (ignorable ,env ,@(set-difference args +lambda-list-keywords+)))
+               (declare (ignorable ,env ,@(set-difference args lambda-list-keywords)))
                ,@body))
        ',name)))
 

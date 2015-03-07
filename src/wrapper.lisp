@@ -1,5 +1,4 @@
 
-(in-package :cl21-user)
 (in-package :recursive-macroexpansion)
 
 (define-condition compile-time-condition (simple-condition) ())
