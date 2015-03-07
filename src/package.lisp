@@ -7,6 +7,6 @@ Copyright (c) 2014 guicho
 (defpackage :recursive-macroexpansion
   (:use :cl21 :cl21.core :cl21.core.environment
         :optima)
-  (:export :defexpand
+  (:export :defrmacro
            :rmacroexpand
            :recursive-macro-function))

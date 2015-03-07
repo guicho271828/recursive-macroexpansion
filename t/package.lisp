@@ -55,10 +55,10 @@
     (eval '(with-let-normal x 1 (limited-progn x 2 3 4)))))
 
 
-;; On the other hand, in `defexpand', we can control the further expansion.
+;; On the other hand, in `defrmacro', we can control the further expansion.
 ;; What's special here is `rmacroexpand'.
 
-(defexpand with-let (var-form value-form &body body)
+(defrmacro with-let (var-form value-form &body body)
   (handler-bind ((error #'stupid-error-handler))
     (rmacroexpand
      `(let ((,var-form ,value-form))
@@ -103,7 +103,7 @@
 ;; In order to pass the outer environment to the subform expander,
 ;; call =rmacroexpand= with optional second argument =env=.
 
-(defexpand with-let-env (&environment env var-form value-form &body body)
+(defrmacro with-let-env (&environment env var-form value-form &body body)
   (handler-bind ((error #'stupid-error-handler))
     (rmacroexpand
      `(let ((,var-form ,value-form))
@@ -180,4 +180,51 @@
   "lambda form in ANSI CL"
   (finishes
     (rmacroexpand '((lambda (x) x) 5))))
+
+(test issue2
+  "issue 2 -- infinite loop in (lambda ...) expansion"
+  (finishes
+    (rmacroexpand '(lambda (x) x)))
+  (finishes
+    (rmacroexpand '(sb-int:named-lambda a (x) x)))
+  (finishes
+    (rmacroexpand '(defun a (x) x)))
+
+  #+nil
+  (progn
+    (handler-case
+        (finishes
+          (rmacroexpand '(lambda (x) x)))
+      (SERIOUS-CONDITION (c)
+        (fail)))
+    #+sbcl
+    (handler-case
+        (finishes
+          (rmacroexpand '(sb-int:named-lambda a (x) x)))
+      (SERIOUS-CONDITION (c)
+        (fail)))
+    (handler-case
+        (finishes
+          (rmacroexpand '(defun a (x) x)))
+      (SERIOUS-CONDITION (c)
+        (fail)))))
+;; 
+;; 
+;; ;; issue 1 -- let*, declaration and style warning.
+;; ;; Authors of the previous version might have noticed the same problem,
+;; ;; which can be seen in the definition of (defhandler let* ...)
+;; ;; However their solution was not
+;; ;; effective because handler-let* is actually never called with nil.
+;; ;; At least I ensured that the declaration
+;; ;; is wrapped in `locally`. However, style warnings are still signalled.
+;; (test issue1-let*-declare
+;;   (finishes
+;;     (handler-bind ((style-warning
+;;                     (lambda (c)
+;;                       (warn "style-warning signalled"))))
+;;       (compile nil
+;;                `(lambda ()
+;;                   ,(rmacroexpand '(let* ((a 1)
+;;                                          (b 2))
+;;                                    (declare (ignore a b)))))))))
 

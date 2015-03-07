@@ -7,21 +7,21 @@ which provides an easier compile-time error handling.
 Recursive-Macroexpansion has the completely different expansion algorithm than
 Common Lisp's macro expansion, which is based on =macroexpand-1= and =macroexpand=.
 
-*BIG NOTE*: This is my *FIRST* library written in controversial =CL21=. Thanks to
-[[https://github.com/fukamachi][Fukamachi]] !
-
-*BIG NOTE2*: This should be clearly noted for the people not familier with
-CL21. This library is written in CL21 but /using this library does not require
-doing so/. If you use RMACROEXPAND, it is just a normal common lisp
-function. Symbols are exported just as in Common Lisp.
-
-While dependency to CL21 exists, once installed, CL21 does not interfere
-you, nor does it break your environment (such as overwriting the readtable).
-CL21 introduces many custom readmacros, but one
-notable point in CL21 is its *package local readtable* (implemented with
-=named-readtable=). AFAIK it is safer than the previous readtable manipulation
-method. In CL21, a new =in-package= is introduced so that it automatically loads the
-=named-readtable= with the same name as that of the package.
+# *BIG NOTE*: This is my *FIRST* library written in controversial =CL21=. Thanks to
+# [[https://github.com/fukamachi][Fukamachi]] !
+# 
+# *BIG NOTE2*: This should be clearly noted for the people not familier with
+# CL21. This library is written in CL21 but /using this library does not require
+# doing so/. If you use RMACROEXPAND, it is just a normal common lisp
+# function. Symbols are exported just as in Common Lisp.
+# 
+# While dependency to CL21 exists, once installed, CL21 does not interfere
+# you, nor does it break your environment (such as overwriting the readtable).
+# CL21 introduces many custom readmacros, but one
+# notable point in CL21 is its *package local readtable* (implemented with
+# =named-readtable=). AFAIK it is safer than the previous readtable manipulation
+# method. In CL21, a new =in-package= is introduced so that it automatically loads the
+# =named-readtable= with the same name as that of the package.
 
 
 * API
@@ -30,7 +30,7 @@ Four functions/macros are exported.
 
 |                                 | analogous to                                            |
 |---------------------------------+---------------------------------------------------------|
-| defexpand                       | defmacro                                                |
+| defrmacro                       | defmacro                                                |
 | rmacroexpand                    | macroexpand , macroexpand-dammit , macroexpand-all etc. |
 | recursive-macro-function        | macro-function                                          |
 | (setf recursive-macro-function) | (setf macro-function)                                   |
@@ -74,11 +74,11 @@ For example, the combination below is a rather stupid example:
       (with-let x 1 (limited-progn 1 2 3 4)))
 #+END_SRC
 
-On the other hand, with =defexpand=, we can control the further expansion.  What's
+On the other hand, with =defrmacro=, we can control the further expansion.  What's
 special here is =rmacroexpand=.
 
 #+BEGIN_SRC lisp
-    (defexpand with-let (var-form value-form &body body)
+    (defrmacro with-let (var-form value-form &body body)
       (handler-bind ((error #'stupid-error-handler))
         (rmacroexpand
          `(let ((,var-form ,value-form))
@@ -127,7 +127,7 @@ In order to pass the outer environment to the subform expander,
 call =rmacroexpand= with optional second argument =env=.
 
 #+BEGIN_SRC lisp
-(defexpand with-let-env (&environment env var-form value-form &body body)
+(defrmacro with-let-env (&environment env var-form value-form &body body)
   (handler-bind ((error #'stupid-error-handler))
     (rmacroexpand
      `(let ((,var-form ,value-form))

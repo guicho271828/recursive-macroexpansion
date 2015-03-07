@@ -42,7 +42,7 @@
     "a condition signalled when compiling define-condition")
 
 (macrolet ((expand (target)
-             `(defexpand ,target (&whole whole name args &body body &environment env)
+             `(defrmacro ,target (&whole whole name args &body body &environment env)
                 (signals (if (fboundp name) 'function-redefinition 'function-definition)
                          :name name :args args :body body)
                 (macroexpand whole env))))
@@ -54,7 +54,7 @@
   (expand deftype))
 
 (macrolet ((expand (target)
-             `(defexpand ,target (&whole whole name &body body &environment env)
+             `(defrmacro ,target (&whole whole name &body body &environment env)
                 (signals (if (boundp name) 'variable-redefinition 'variable-definition)
                          :name name
                          :body body)
@@ -65,7 +65,7 @@
   (expand define-symbol-macro))
 
 (macrolet ((expand (target def redef)
-             `(defexpand ,target (&whole whole name superclasses slots &rest options &environment env)
+             `(defrmacro ,target (&whole whole name superclasses slots &rest options &environment env)
                 (signals (if (find-class name nil env) ',def ',redef)
                          :name name
                          :superclasses superclasses

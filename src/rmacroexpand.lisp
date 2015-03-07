@@ -4,7 +4,7 @@
 
 (define-symbol-plist-accessor recursive-macro-function)
 
-(defmacro defexpand (name lambda-list &body body)
+(defmacro defrmacro (name lambda-list &body body)
   (multiple-value-bind (whole sans-whole) (take-whole lambda-list)
     (multiple-value-bind (env sans-env-whole) (take-env sans-whole)
       `(eval-when (:compile-toplevel :load-toplevel :execute)
@@ -29,7 +29,7 @@
          ;; the form is either a special, macro, function, lambda form
          (destructuring-bind (head &rest args) form
            (if (symbolp head)
-             (block nil
+               (block nil
                  ;; special form
                  (when-let1 (h (special-form-handler head))
                    (return (apply h env args)))
@@ -45,7 +45,7 @@
                    ;; If things are treated incorrectly, it will cause an infinite loop
                    (return (rmacroexpand (macroexpand-1 form env) env)))
                  `(,head ,@(map ^(rmacroexpand % env) args)))
-             ;; cons, but the car is not a symbol = lambda form
+               ;; cons, but the car is not a symbol = lambda form
                (rmacroexpand `(funcall ,head ,@args) env))))
         ;; form is atoms
         ((symbolp form) ;; symbol-macrolet, or variable
